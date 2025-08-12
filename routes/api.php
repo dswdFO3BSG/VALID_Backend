@@ -9,10 +9,6 @@ use App\Http\Controllers\Settings\QueueManagerController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/ping', function () {
-    return response()->json(['message' => 'pong']);
-});
-
 Route::controller(AuthenticationController::class)->group(function () {
     Route::post('login', 'login');
 });
@@ -32,6 +28,11 @@ Route::controller(AuthenticationController::class)->group(function () {
 
 
 Route::middleware('auth:sanctum')->group(function () {
+    
+    Route::prefix('auth')->controller(AuthenticationController::class)->group(function () {
+        Route::post('logout', 'logout');
+    });
+
     Route::prefix('users')->controller(UserAccessController::class)->group(function () {
         Route::get('user-access', 'getUserAccess');
         Route::get('user-modules', 'getUserModules');
@@ -45,7 +46,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('statistics', 'getTotalCount');
         Route::get('age_group', 'getCountAge');
         Route::get('municipality', 'getCountMunicipality');
-
     });
 
     Route::prefix('queue')->controller(QueueManagerController::class)->group(function () {  
@@ -56,6 +56,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('reports')->controller(ReportsController::class)->group(function () {
         Route::get('clients', 'generateReports');
     });
+
 
     Route::prefix('bene_id')->controller(uploadPhotoController::class)->group(function () {
         Route::post('upload-photo', 'uploadPhoto');
