@@ -27,9 +27,14 @@ class AuthenticationController extends Controller
                 ->where('userprofile.empno', '=', $request->username)
                 ->first();
                 
+        // Check if user exists
+        if (!$user) {
+            return response()->json(['error' => 'Employee Number not found. Please coordinate with HR.', 'validation' => '1'], 200);
+        }
+                
         if ($user->account_status == 2) {
             if ($user->isLog == 0) {
-                if($user && Hash::check($request->password, $user->password)){
+                if(Hash::check($request->password, $user->password)){
                     return $user;
                 } else {
                     return response()->json(['error' => 'Incorrect username or password', 'validation' => '1'], 200);
@@ -57,8 +62,6 @@ class AuthenticationController extends Controller
             if ($user instanceof \Illuminate\Http\JsonResponse) {
                 return $user;
             }
-    
-
             return response()->json([
                 'status' => true,
                 'message' => 'User Logged In Successfully',
