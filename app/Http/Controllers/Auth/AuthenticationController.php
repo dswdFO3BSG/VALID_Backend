@@ -8,9 +8,52 @@ use Illuminate\Container\Attributes\Auth;
 use Illuminate\Container\Attributes\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 
 class AuthenticationController extends Controller
 {
+
+    private function verifyRecaptcha($token)
+    {
+        // Use v3 secret key (uncommented)
+        $secretKey = env('RECAPTCHA_SECRET_KEY');
+        
+        // Comment out v2 secret key
+        // $secretKey = env('RECAPTCHA_SECRET_KEY_v2');
+        
+        if (!$secretKey) {
+            return ['success' => false, 'error' => 'reCAPTCHA secret key not configured'];
+        }
+
+        try {
+            $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+                'secret' => $secretKey,
+                'response' => $token
+            ]);
+
+            $result = $response->json();
+            
+            if (!$result['success']) {
+                return ['success' => false, 'error' => 'reCAPTCHA verification failed'];
+            }
+
+            // Uncomment v3 score check for v3 implementation
+            if (isset($result['score']) && $result['score'] < 0.5) {
+                return ['success' => false, 'error' => 'reCAPTCHA score too low'];
+            }
+
+            // Comment out v2 implementation (no score check needed)
+            // // Comment out v3 score check for v2 implementation
+            // // if (isset($result['score']) && $result['score'] < 0.5) {
+            // //     return ['success' => false, 'error' => 'reCAPTCHA score too low'];
+            // // }
+
+            return ['success' => true];
+            
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => 'reCAPTCHA verification error: ' . $e->getMessage()];
+        }
+    }
 
     private function validateUser($request){
         $user = User::selectRaw("
@@ -51,8 +94,18 @@ class AuthenticationController extends Controller
         try {
             $request->validate([
                 'username' => 'required',
-                'password' => 'required'
+                'password' => 'required',
+                'recaptcha_token' => 'required'
             ]);
+
+            // Verify reCAPTCHA token
+            $recaptchaResult = $this->verifyRecaptcha($request->recaptcha_token);
+            if (!$recaptchaResult['success']) {
+                return response()->json([
+                    'error' => 'Security verification failed. Please try again.',
+                    'validation' => '1'
+                ], 200);
+            }
     
             $user = $this->validateUser($request);
             if(!$user){
