@@ -30,7 +30,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Register audit trail middleware with alias
+        $middleware->alias([
+            'audit.trail' => \App\Http\Middleware\AuditTrailMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Unauthenticated

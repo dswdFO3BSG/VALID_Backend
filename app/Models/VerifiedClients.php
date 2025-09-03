@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\AuditTrailTrait;
 use Illuminate\Database\Eloquent\Model;
 
 class VerifiedClients extends Model
 {
+    use AuditTrailTrait;
+    
     protected $table = 'verified_clients';
     protected $connection = 'cvs_mysql';
     protected $primaryKey = 'id';
@@ -52,6 +55,33 @@ class VerifiedClients extends Model
         'bene_id_creation_date',
         'status',
     ];
+
+    /**
+     * Override to specify the audit module
+     */
+    protected static function getAuditModule(): string
+    {
+        return 'masterlist';
+    }
+
+    /**
+     * Override to provide custom audit descriptions
+     */
+    protected static function getAuditDescription($model, string $action): ?string
+    {
+        $fullName = trim("{$model->first_name} {$model->middle_name} {$model->last_name}");
+        
+        switch ($action) {
+            case 'CREATE':
+                return "Added new beneficiary: {$fullName} (ID: {$model->beneficiary_id})";
+            case 'UPDATE':
+                return "Updated beneficiary information: {$fullName} (ID: {$model->beneficiary_id})";
+            case 'DELETE':
+                return "Removed beneficiary: {$fullName} (ID: {$model->beneficiary_id})";
+            default:
+                return parent::getAuditDescription($model, $action);
+        }
+    }
 }
 
 

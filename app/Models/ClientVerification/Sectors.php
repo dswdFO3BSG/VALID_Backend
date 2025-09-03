@@ -2,10 +2,13 @@
 
 namespace App\Models\ClientVerification;
 
+use App\Traits\AuditTrailTrait;
 use Illuminate\Database\Eloquent\Model;
 
 class Sectors extends Model
 {
+    use AuditTrailTrait;
+    
     public $timestamps = false;
     protected $table = 'sectors';
     protected $primaryKey = 'id';
@@ -15,4 +18,29 @@ class Sectors extends Model
         'description',
         'status'
     ];
+
+    /**
+     * Override to specify the audit module
+     */
+    protected static function getAuditModule(): string
+    {
+        return 'masterlist';
+    }
+
+    /**
+     * Override to provide custom audit descriptions
+     */
+    protected static function getAuditDescription($model, string $action): ?string
+    {
+        switch ($action) {
+            case 'CREATE':
+                return "Created new sector: {$model->description}";
+            case 'UPDATE':
+                return "Updated sector: {$model->description}";
+            case 'DELETE':
+                return "Deleted sector: {$model->description}";
+            default:
+                return parent::getAuditDescription($model, $action);
+        }
+    }
 }
