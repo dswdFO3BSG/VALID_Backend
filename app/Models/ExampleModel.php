@@ -1,26 +1,19 @@
 <?php
 
-namespace App\Models\ClientVerification;
+namespace App\Models;
 
 use App\Traits\AuditTrailTrait;
 use Illuminate\Database\Eloquent\Model;
 
-class QueueManager extends Model
+class ExampleModel extends Model
 {
     use AuditTrailTrait;
-    
-    public $timestamps = false;
-    protected $table = 'queues';
-    protected $primaryKey = 'id';
-    protected $connection = 'cvs_mysql';
 
     protected $fillable = [
+        'name',
         'description',
-        'sector_id',
-        'program_id',
-        'last_queue_number',
-        'last_queue_number_timestamp',  
-        'status'
+        'status',
+        'empno'
     ];
 
     /**
@@ -28,7 +21,7 @@ class QueueManager extends Model
      */
     protected static function getAuditModule(): string
     {
-        return 'queue_manager';
+        return 'masterlist'; // or 'user_access', 'queue_manager', etc.
     }
 
     /**
@@ -38,11 +31,11 @@ class QueueManager extends Model
     {
         switch ($action) {
             case 'CREATE':
-                return "Created new queue: {$model->description}";
+                return "Created new {$model->name} in masterlist module";
             case 'UPDATE':
-                return "Updated queue: {$model->description}";
+                return "Updated {$model->name} in masterlist module";
             case 'DELETE':
-                return "Deleted queue: {$model->description}";
+                return "Deleted {$model->name} from masterlist module";
             default:
                 return parent::getAuditDescription($model, $action);
         }
