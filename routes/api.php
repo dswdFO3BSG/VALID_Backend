@@ -8,6 +8,7 @@ use App\Http\Controllers\ClientVerification\uploadPhotoController;
 use App\Http\Controllers\Reports\ReportsController;
 use App\Http\Controllers\Settings\QueueManagerController;
 use App\Http\Controllers\AuditTrailController;
+use App\Http\Controllers\UserModulesController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -89,4 +90,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('user-current-modules', 'getUserCurrentModules');
         Route::get('user-access-path', 'checkUserAccessPath');
     });
+
+    // User Modules Management Routes
+    Route::apiResource('user-modules', UserModulesController::class);
     });

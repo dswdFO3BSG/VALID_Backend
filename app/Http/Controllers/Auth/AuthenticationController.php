@@ -21,9 +21,6 @@ class AuthenticationController extends Controller
         // Use v3 secret key (uncommented)
         $secretKey = env('RECAPTCHA_SECRET_KEY');
         
-        // Comment out v2 secret key
-        // $secretKey = env('RECAPTCHA_SECRET_KEY_v2');
-        
         if (!$secretKey) {
             return ['success' => false, 'error' => 'reCAPTCHA secret key not configured'];
         }
@@ -45,11 +42,6 @@ class AuthenticationController extends Controller
                 return ['success' => false, 'error' => 'reCAPTCHA score too low'];
             }
 
-            // Comment out v2 implementation (no score check needed)
-            // // Comment out v3 score check for v2 implementation
-            // // if (isset($result['score']) && $result['score'] < 0.5) {
-            // //     return ['success' => false, 'error' => 'reCAPTCHA score too low'];
-            // // }
 
             return ['success' => true];
             
@@ -205,8 +197,9 @@ class AuthenticationController extends Controller
             // Verify reCAPTCHA token
             $recaptchaResult = $this->verifyRecaptcha($request->recaptcha_token);
             if (!$recaptchaResult['success']) {
+                $errorMessage = $recaptchaResult['error'] ?? 'Security verification failed. Please try again.';
                 return response()->json([
-                    'error' => 'Security verification failed. Please try again.',
+                    'error' => $errorMessage,
                     'validation' => '1'
                 ], 200);
             }
