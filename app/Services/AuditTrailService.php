@@ -149,16 +149,70 @@ class AuditTrailService
     }
 
     /**
+     * Log MFA setup action
+     */
+    public static function logMFASetup(string $empno, bool $success = true, string $description = null): void
+    {
+        self::logMFAAction($empno, 'setup', $success, $description ?? ($success ? 'MFA setup completed successfully' : 'MFA setup failed'));
+    }
+
+    /**
+     * Log MFA verification action
+     */
+    public static function logMFAVerify(string $empno, bool $success = true, string $description = null): void
+    {
+        self::logMFAAction($empno, 'verify', $success, $description ?? ($success ? 'MFA verification successful' : 'MFA verification failed'));
+    }
+
+    /**
+     * Log MFA disable action
+     */
+    public static function logMFADisable(string $empno, string $description = null): void
+    {
+        self::logMFAAction($empno, 'disable', true, $description ?? 'MFA disabled for user');
+    }
+
+    /**
+     * Log MFA reset action (admin action)
+     */
+    public static function logMFAReset(string $targetEmpno, string $adminEmpno = null, string $description = null): void
+    {
+        try {
+            AuditTrail::log([
+                'empno' => $adminEmpno ?? self::getCurrentEmpno(),
+                'action' => 'MFA_RESET',
+                'module' => 'mfa',
+                'table_name' => 'users_mfa',
+                'record_id' => $targetEmpno,
+                'old_values' => null,
+                'new_values' => null,
+                'description' => $description ?? "MFA reset for user: {$targetEmpno}",
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Audit Trail MFA Reset Log Error: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Log MFA actions
      */
     public static function logMFAAction(string $empno, string $action, bool $success = true, string $description = null): void
     {
         try {
+            // Determine the correct action based on the MFA action type
+            $auditAction = match($action) {
+                'setup' => 'MFA_SETUP',
+                'verify' => $success ? 'MFA_VERIFY' : 'MFA_VERIFY_FAILED',
+                'disable' => 'MFA_DISABLE',
+                'reset' => 'MFA_RESET',
+                default => "MFA_" . strtoupper($action)
+            };
+
             AuditTrail::log([
                 'empno' => $empno,
-                'action' => "MFA_{$action}" . ($success ? '_SUCCESS' : '_FAILED'),
+                'action' => $auditAction,
                 'module' => 'mfa',
-                'table_name' => 'user_mfa',
+                'table_name' => 'users_mfa',
                 'record_id' => $empno,
                 'old_values' => null,
                 'new_values' => null,

@@ -32,6 +32,11 @@ trait AuditTrailTrait
      */
     protected static function logModelAction(Model $model, string $action): void
     {
+        // Skip logging if audit trail is disabled
+        if (static::auditTrailDisabled()) {
+            return;
+        }
+
         try {
             $tableName = $model->getTable();
             $recordId = $model->getKey();

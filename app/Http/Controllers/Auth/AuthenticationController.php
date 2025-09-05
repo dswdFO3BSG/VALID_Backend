@@ -67,6 +67,8 @@ class AuthenticationController extends Controller
                 
         // Check if user exists
         if (!$user) {
+            // Log failed login - user not found
+            AuditTrailService::logLogin($request->username, false, 'Login failed - user not found');
             return response()->json(['error' => 'Incorrect Username or Password.', 'validation' => '1'], 200);
         }
                 
@@ -81,17 +83,24 @@ class AuthenticationController extends Controller
                         // Password is correct, return user for further processing
                         return $user;
                     } else {
+                        // Log failed login - incorrect password
+                        AuditTrailService::logLogin($request->username, false, 'Login failed - incorrect password');
                         return response()->json(['error' => 'Incorrect Username or Password', 'validation' => '1'], 200);
                     }
                 } catch (\Exception $e) {
                     // Log decryption error and return generic error message
                     Log::error('Password decryption failed: ' . $e->getMessage());
+                    AuditTrailService::logLogin($request->username, false, 'Login failed - password decryption error');
                     return response()->json(['error' => 'Authentication failed. Please try again.', 'validation' => '1'], 200);
                 }
             } else {
+                // Log failed login - password must be reset
+                AuditTrailService::logLogin($request->username, false, 'Login failed - password reset required');
                 return response()->json(['error' => 'To comply with cybersecurity policies, please update your password immediately. You will be redirected to the Employee Registration Module to log in and update your password.' , 'validation' => '2'], 200);
             }
         } else {
+            // Log failed login - account status not active
+            AuditTrailService::logLogin($request->username, false, 'Login failed - account status: ' . ($user->account_status_name ?? 'unknown'));
             return response()->json(['error' => 'Incorrect Username or Password' , 'validation' => '3', 'accountStatus' => $user->account_status_name], 200);
         }
     }
@@ -228,7 +237,7 @@ class AuthenticationController extends Controller
                 return response()->json($response, 200);
             }
 
-            // Log successful login
+            // Log successful complete login (no MFA required or MFA already satisfied)
             AuditTrailService::logLogin($request->username, true, 'User logged in successfully');
 
             return response()->json([

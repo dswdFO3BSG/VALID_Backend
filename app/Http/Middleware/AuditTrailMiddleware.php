@@ -94,6 +94,10 @@ class AuditTrailMiddleware
             return 'masterlist';
         }
         
+        if (str_contains($path, 'mfa-management')) {
+            return 'mfa';
+        }
+        
         if (str_contains($path, 'mfa') || str_contains($path, 'auth')) {
             return 'authentication';
         }

@@ -59,13 +59,25 @@ class MFAController extends Controller
             // Generate a new secret key
             $secretKey = $this->google2fa->generateSecretKey(32);
 
-            // Create or update MFA record
-            $userMFA = UserMFA::updateOrCreate(
-                ['empno' => $request->empno],
-                [
-                    'mfa_secret' => $secretKey,
-                    'enabled_mfa' => 0, // Not enabled until verified
-                ]
+            // Create or update MFA record - disable audit trail to prevent automatic logging
+            $userMFA = UserMFA::withoutAuditTrail(function() use ($request, $secretKey) {
+                return UserMFA::updateOrCreate(
+                    ['empno' => $request->empno],
+                    [
+                        'mfa_secret' => $secretKey,
+                        'enabled_mfa' => 0, // Not enabled until verified
+                    ]
+                );
+            });
+
+            // Log MFA setup initiation
+            AuditTrailService::logCustomAction(
+                $request->empno,
+                'MFA_SETUP',
+                'mfa',
+                'MFA setup initiated for user: ' . $request->empno,
+                'users_mfa',
+                $request->empno
             );
 
             // Generate company name for QR code
@@ -127,14 +139,25 @@ class MFAController extends Controller
             $isValid = $this->google2fa->verifyKey($userMFA->mfa_secret, $request->totp_code, 2); // 2 windows tolerance
 
             if (!$isValid) {
+                // Log failed MFA setup verification
+                AuditTrailService::logMFAVerify($request->empno, false, 'MFA setup verification failed - invalid TOTP code');
+                
                 return response()->json([
                     'error' => 'Invalid TOTP code. Please try again.',
                     'status' => false
                 ], 400);
             }
 
-            // Enable MFA for the user
-            $userMFA->update(['enabled_mfa' => 1]);
+            // Enable MFA for the user - disable audit trail to prevent automatic UPDATE logging
+            UserMFA::withoutAuditTrail(function() use ($userMFA) {
+                $userMFA->update(['enabled_mfa' => 1]);
+            });
+
+            // Log successful MFA setup completion
+            AuditTrailService::logMFASetup($request->empno, true, 'MFA setup completed and enabled successfully');
+
+            // Log successful complete login after MFA setup
+            AuditTrailService::logLogin($request->empno, true, 'User logged in successfully after MFA setup');
 
             // Get the user information for creating token
             $user = User::selectRaw("
@@ -198,11 +221,20 @@ class MFAController extends Controller
             $isValid = $this->google2fa->verifyKey($userMFA->mfa_secret, $request->totp_code, 2);
 
             if (!$isValid) {
+                // Log failed MFA verification
+                AuditTrailService::logMFAVerify($request->empno, false, 'MFA login verification failed - invalid TOTP code');
+                
                 return response()->json([
                     'error' => 'Invalid TOTP code. Please try again.',
                     'status' => false
                 ], 400);
             }
+
+            // Log successful MFA verification
+            AuditTrailService::logMFAVerify($request->empno, true, 'MFA login verification successful');
+
+            // Log successful complete login after MFA verification
+            AuditTrailService::logLogin($request->empno, true, 'User logged in successfully after MFA verification');
 
             // Get the user information for creating token
             $user = User::selectRaw("
@@ -241,10 +273,13 @@ class MFAController extends Controller
                 // Set expiry to 30 days from now
                 $expiresAt = now()->addDays(30);
                 
-                $userMFA->update([
-                    'mfa_remember_hash' => $rememberHash,
-                    'mfa_remember_expires' => $expiresAt
-                ]);
+                // Update without audit trail logging
+                UserMFA::withoutAuditTrail(function() use ($userMFA, $rememberHash, $expiresAt) {
+                    $userMFA->update([
+                        'mfa_remember_hash' => $rememberHash,
+                        'mfa_remember_expires' => $expiresAt
+                    ]);
+                });
 
                 $responseData['remember_token'] = $rememberToken;
                 $responseData['expires_at'] = $expiresAt->toISOString();
@@ -324,18 +359,33 @@ class MFAController extends Controller
             // Verify current TOTP code before disabling
             $isValid = $this->google2fa->verifyKey($userMFA->mfa_secret, $request->totp_code, 2);
             if (!$isValid) {
+                // Log failed MFA disable attempt
+                AuditTrailService::logCustomAction(
+                    $request->empno,
+                    'MFA_DISABLE_FAILED',
+                    'mfa',
+                    'MFA disable failed - invalid TOTP code',
+                    'users_mfa',
+                    $request->empno
+                );
+                
                 return response()->json([
                     'error' => 'Invalid TOTP code. Cannot disable MFA.',
                     'status' => false
                 ], 400);
             }
 
-            // Disable MFA
-            $userMFA->update([
-                'enabled_mfa' => 0,
-                'mfa_remember_hash' => null,
-                'mfa_remember_expires' => null
-            ]);
+            // Disable MFA - temporarily disable audit trail to prevent automatic UPDATE logging
+            UserMFA::withoutAuditTrail(function() use ($userMFA) {
+                $userMFA->update([
+                    'enabled_mfa' => 0,
+                    'mfa_remember_hash' => null,
+                    'mfa_remember_expires' => null
+                ]);
+            });
+
+            // Log MFA disable
+            AuditTrailService::logMFADisable($request->empno, 'MFA disabled by user');
 
             return response()->json([
                 'status' => true,
