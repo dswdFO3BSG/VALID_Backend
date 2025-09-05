@@ -9,6 +9,7 @@ use App\Http\Controllers\Reports\ReportsController;
 use App\Http\Controllers\Settings\QueueManagerController;
 use App\Http\Controllers\AuditTrailController;
 use App\Http\Controllers\UserModulesController;
+use App\Http\Controllers\MfaManagementController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -93,4 +94,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // User Modules Management Routes
     Route::apiResource('user-modules', UserModulesController::class);
+
+    // MFA Management Routes (Superadmin only)
+    Route::prefix('mfa-management')->controller(MfaManagementController::class)->group(function () {
+        Route::get('/', 'index');
+        Route::get('/statistics', 'getStatistics');
+        Route::get('/users/{userId}', 'show');
+        Route::post('/reset/{userId}', 'resetUserMfa');
+        Route::post('/bulk-reset', 'bulkResetMfa');
+    });
     });
