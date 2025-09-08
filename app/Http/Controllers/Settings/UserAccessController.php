@@ -94,7 +94,7 @@ class UserAccessController extends Controller
     public function getUserModules() {
         try {
 
-            $userModules = UserModules::get();
+            $userModules = UserModules::where('status', 1)->get();
 
             return response()->json([
                 'status' => 'success',
