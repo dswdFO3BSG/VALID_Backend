@@ -67,12 +67,11 @@ class AuditTrail extends Model
      */
     public function scopeDateRange($query, $startDate = null, $endDate = null)
     {
-        if ($startDate) {
-            $query->whereDate('performed_at', '>=', $startDate);
-        }
-        
-        if ($endDate) {
-            $query->whereDate('performed_at', '<=', $endDate);
+        if ($startDate && $endDate) {
+            $start = Carbon::parse($startDate)->startOfDay();
+            $end = Carbon::parse($endDate)->endOfDay();
+            
+            $query->whereBetween('performed_at', [$start, $end]);
         }
         
         return $query;
