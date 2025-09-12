@@ -33,6 +33,17 @@ return Application::configure(basePath: dirname(__DIR__))
         // Register audit trail middleware with alias
         $middleware->alias([
             'audit.trail' => \App\Http\Middleware\AuditTrailMiddleware::class,
+            'csp' => \App\Http\Middleware\ContentSecurityPolicyMiddleware::class,
+        ]);
+
+        // Apply CSP middleware globally to all web routes
+        $middleware->web(append: [
+            \App\Http\Middleware\ContentSecurityPolicyMiddleware::class,
+        ]);
+
+        // Apply CSP middleware to API routes as well
+        $middleware->api(append: [
+            \App\Http\Middleware\ContentSecurityPolicyMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
