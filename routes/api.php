@@ -10,6 +10,7 @@ use App\Http\Controllers\Settings\QueueManagerController;
 use App\Http\Controllers\AuditTrailController;
 use App\Http\Controllers\UserModulesController;
 use App\Http\Controllers\MfaManagementController;
+use App\Http\Controllers\SecurityTestController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -103,4 +104,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/reset/{userId}', 'resetUserMfa');
         Route::post('/bulk-reset', 'bulkResetMfa');
     });
-    });
+});
+
+// CSP Testing Routes (can be removed in production)
+Route::prefix('security-test')->controller(SecurityTestController::class)->group(function () {
+    Route::get('/csp-headers', 'testCspHeaders');
+    Route::post('/csp-report', 'reportCspViolation');
+});
