@@ -93,7 +93,7 @@ class ClientVerificationController extends Controller
 
         try {
             $clients = $query
-            ->selectRaw('id, psn, CONCAT(COALESCE(last_name, ""), ", ", COALESCE(first_name, ""), " ", COALESCE(middle_name, ""), " ", COALESCE(suffix_name, "")) as fullName, last_name, first_name, middle_name, suffix_name, birth_date, DATE_FORMAT(birth_date, "%M %d, %Y") as formattedBirthdate, DATE_FORMAT(verified_at, "%M %d, %Y") as verified_at, verification_result, bene_id_created, bene_id_creation_date')
+            ->selectRaw('id, psn, CONCAT(COALESCE(last_name, ""), ", ", COALESCE(first_name, ""), " ", COALESCE(middle_name, ""), " ", COALESCE(suffix_name, "")) as fullName, last_name, first_name, middle_name, suffix_name, birth_date, DATE_FORMAT(birth_date, "%M %d, %Y") as formattedBirthdate, DATE_FORMAT(verified_at, "%M %d, %Y") as verified_at, verification_result, bene_id_created, bene_id_creation_date, beneficiary_id')
             ->orderBy('verified_at', 'desc')->get();
 
             return response()->json([
@@ -206,7 +206,7 @@ class ClientVerificationController extends Controller
 
     public function updateClients(Request $request) {
         try {
-            $id = $request->id ?? null;
+            $beneficiary_id = $request->beneficiary_id ?? null;
             $psn = $request->psn ?? null;
             $face_url = $request->face_url ?? null;
             $first_name = strtoupper($request->firstName ?? null);
@@ -239,8 +239,8 @@ class ClientVerificationController extends Controller
             $pob_country = $request->pob_country ?? null;
             $verified_by = $request->verified_by ?? null;
             $verification_result = $request->verificationResult ?? 0;
-            
-            $verifiedClient = VerifiedClients::where('id', $id)->update([
+
+            $verifiedClient = VerifiedClients::where('beneficiary_id', $beneficiary_id)->update([
                 'psn'=> $psn,
                 // 'face_url'=> $face_url,
                 'first_name'=> $first_name,
